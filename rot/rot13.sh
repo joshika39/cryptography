@@ -11,9 +11,9 @@ main () {
 		input="$(xsel -b )"
 	fi
 
-	result="$(translate $input )"
-	echo $result
-	echo -n $result | xsel -b -i
+	result="$(translate "$input" )"
+	echo "$result"
+	echo -n "$result" | xsel -b -i
 }
 
 while [ 3 == 3 ]; do 

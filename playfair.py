@@ -51,6 +51,12 @@ def shift_letter_ver(shift_letter: str, matrix: list, direction: int) -> str:
             return matrix[row - 1][col]
 
 
+def get_letter_from_number(num_code: int, matrix: list) -> str:
+    row = num_code // 10
+    col = num_code % 10
+    return matrix[row - 1][col - 1]
+
+
 def create_plain_text(charset: list, input_message: str) -> list:
     plaintext = []
     input_message = input_message.lower()
@@ -72,7 +78,24 @@ def create_plain_text(charset: list, input_message: str) -> list:
     return plaintext
 
 
-def format_plain_text(input_list: list) -> list:
+def polybius_square_to_list(input_list: str) -> list:
+    input_list_iter = enumerate(input_list)
+    formatted = []
+    pair = []
+    for index, input_list_letter in input_list_iter:
+        if input_list_letter == ' ':
+            formatted.append([input_list_letter])
+        elif index + 1 < len(input_list):
+            num = int(input_list_letter + input_list[index + 1])
+            next(input_list_iter)
+            pair.append(num)
+            if len(pair) >= 2:
+                formatted.append(pair)
+                pair = []
+    return formatted
+
+
+def string_to_list(input_list) -> list:
     input_list_iter = enumerate(input_list)
     formatted = []
     for index, input_list_letter in input_list_iter:
@@ -93,6 +116,14 @@ def format_plain_text(input_list: list) -> list:
     return formatted
 
 
+def list_to_string(source_list: list) -> str:
+    ret_string = ""
+    for pair in source_list:
+        for pair_index, pair_char in enumerate(pair):
+            ret_string += str(pair_char)
+    return ret_string
+
+
 def encode(source_list: list, charset: list, direction: int) -> list:
     target_list = []
     for pair in source_list:
@@ -111,12 +142,22 @@ def encode(source_list: list, charset: list, direction: int) -> list:
     return target_list
 
 
-def list_to_string(source_list: list) -> str:
-    ret_string = ""
+def encode_polybios(source_list: list, charset: list, direction: int) -> list:
+    target_list = []
     for pair in source_list:
-        for pair_index, pair_char in enumerate(pair):
-            ret_string += pair_char
-    return ret_string
+        if direction > 0:
+            if pair[0] == ' ':
+                target_list.append([' '])
+            else:
+                target_list.append([(letter_row(pair[0], charset) + 1) * 10 + (letter_col(pair[0], charset) + 1),
+                                    (letter_row(pair[1], charset) + 1) * 10 + (letter_col(pair[1], charset) + 1)])
+        else:
+            if pair[0] == ' ':
+                target_list.append([' '])
+            else:
+                target_list.append([get_letter_from_number(int(pair[0]), charset),
+                                    get_letter_from_number(int(pair[1]), charset)])
+    return target_list
 
 
 def key_string_to_list(key_string: str) -> list:
@@ -163,25 +204,35 @@ def create_alphabet_charset(alphabet_file: str, key_string: str) -> list:
 
 
 fillerLetter = 'x'
-text = input("Enter a message: ")
-key_str = input("Enter a key: ")
+# text = input("Enter a message: ")
+polybius_str = input("Enter the polybius numbers: ")
+key_str = input("Enter the key: ")
 
 cipher = create_alphabet_charset("EN-alphabet.txt", key_str)
-for line in cipher:
-    for char in line:
-        print(char + "\t", end='')
-    print("\n")
+
+# for line in cipher:
+#     for char in line:
+#         print(char + "\t", end='')
+#     print("\n")
 
 
-pairs = format_plain_text(create_plain_text(cipher, text))
-encoded_pairs = encode(pairs, cipher, 1)
-encoded_text = list_to_string(encoded_pairs)
-decoded_pairs = encode(encoded_pairs, cipher, -1)
-decoded_text = list_to_string(decoded_pairs)
+# pairs = string_to_list(create_plain_text(cipher, text))
+# print(pairs)
+#
+# encoded_pairs = encode(pairs, cipher, 1)
+# print(encoded_pairs)
+#
+# encoded_pairs_polybios = encode_polybios(encoded_pairs, cipher, 1)
+# print(encoded_pairs_polybios)
+#
+# encoded_text_polybios = list_to_string(encoded_pairs_polybios)
+# print(encoded_text_polybios)
+#
+# re_encoded_pairs_polybios = polybius_square_to_list(encoded_text_polybios)
+# print(re_encoded_pairs_polybios)
 
-print(pairs)
-print(encoded_pairs)
-print(decoded_pairs)
-print()
-print(encoded_text)
-print(decoded_text)
+polybius_pairs = polybius_square_to_list(polybius_str)
+decoded_polybius_pairs = encode_polybios(polybius_pairs, cipher, -1)
+decoded_pairs = encode(decoded_polybius_pairs, cipher, -1)
+print(list_to_string(decoded_pairs))
+

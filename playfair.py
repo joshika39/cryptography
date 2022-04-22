@@ -130,16 +130,24 @@ def string_to_list(input_list) -> list:
                 next(input_list_iter)
             elif input_list[index + 1] == ' ':
                 pair.append(input_list_letter)
-                pair.append(fillerLetter)
+                if len(pair) != 2:
+                    pair.append(fillerLetter)
             elif len(pair) > 0 and pair[0] == input_list[index]:
                 pair.append(fillerLetter)
+                formatted.append(pair)
+                pair = [input_list_letter]
             else:
                 pair.append(input_list_letter)
         else:
             pair.append(input_list_letter)
+            if len(pair) == 1:
+                pair.append(fillerLetter)
+                formatted.append(pair)
+                pair = []
         if len(pair) >= 2:
             formatted.append(pair)
             pair = []
+
     return formatted
 
 
@@ -284,6 +292,11 @@ def on_release(key):
         return False
 
 
+# coding_key = input("Enter the coding key (if none, leave empty): ")
+coding_key = "bolyai/j"
+cipher = create_alphabet_charset("EN-alphabet.txt", coding_key)
+fillerLetter = 'x'
+
 while True:
     sys.stdin.flush()
     code_direction_menu = Menu({1: "Encode a message", -1: "Decode a message", "static": "Exit with 'ctrl + c' at any "
@@ -295,12 +308,8 @@ while True:
     with keyboard.Listener(on_release=is_polybius_menu.on_release) as listener:
         listener.join()
 
-    # coding_key = input("Enter the coding key (if none, leave empty): ")
-    coding_key = "bolyai/j"
-    cipher = create_alphabet_charset("EN-alphabet.txt", coding_key)
-    fillerLetter = 'x'
-
     message = input("Enter the message: ")
+    message = message.lower()
     result = ""
     time.sleep(0.1)
     sys.stdin.flush()
@@ -323,3 +332,12 @@ while True:
     print("Press ESC to quit or any other key to continue")
     with Listener(on_release=on_release) as main_listener:
         main_listener.join()
+
+# test = string_to_list("hello world")
+# print(test)
+# result = encode(test, cipher, 1)
+# print(result)
+# print(encode(result, cipher, -1))
+
+
+

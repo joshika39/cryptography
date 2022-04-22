@@ -1,3 +1,22 @@
+import os
+import time
+import sys
+import pyperclip
+from pynput import keyboard
+from pynput.keyboard import Key, Listener
+
+
+def flush_input():
+    try:
+        import msvcrt
+        while msvcrt.kbhit():
+            msvcrt.getch()
+    except ImportError:
+        import sys
+        import termios  # for linux/unix
+        termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+
+
 def letter_row(search_target: str, matrix: list) -> int:
     for row_index, row in enumerate(matrix):
         for row_letter in row:
@@ -98,21 +117,29 @@ def polybius_square_to_list(input_list: str) -> list:
 def string_to_list(input_list) -> list:
     input_list_iter = enumerate(input_list)
     formatted = []
+    pair = []
+
     for index, input_list_letter in input_list_iter:
         if input_list_letter == ' ':
             formatted.append([input_list_letter])
+            pair = []
         elif index + 1 < len(input_list):
-            if input_list[index + 1] == ' ':
-                formatted.append([input_list_letter, fillerLetter])
-                continue
-            if input_list_letter == input_list[index + 1]:
-                formatted.append([input_list_letter, fillerLetter])
-                continue
-            else:
-                formatted.append([input_list_letter, input_list[index + 1]])
+            if input_list[index + 1] == "/":
+                pair.append(input_list_letter + input_list[index + 1] + input_list[index + 2])
                 next(input_list_iter)
+                next(input_list_iter)
+            elif input_list[index + 1] == ' ':
+                pair.append(input_list_letter)
+                pair.append(fillerLetter)
+            elif len(pair) > 0 and pair[0] == input_list[index]:
+                pair.append(fillerLetter)
+            else:
+                pair.append(input_list_letter)
         else:
-            formatted.append([input_list_letter, fillerLetter])
+            pair.append(input_list_letter)
+        if len(pair) >= 2:
+            formatted.append(pair)
+            pair = []
     return formatted
 
 
@@ -203,36 +230,96 @@ def create_alphabet_charset(alphabet_file: str, key_string: str) -> list:
     return table
 
 
-fillerLetter = 'x'
-# text = input("Enter a message: ")
-polybius_str = input("Enter the polybius numbers: ")
-key_str = input("Enter the key: ")
-
-cipher = create_alphabet_charset("EN-alphabet.txt", key_str)
-
-# for line in cipher:
-#     for char in line:
-#         print(char + "\t", end='')
-#     print("\n")
+# GLOBALS
+highlight = "\x1b[6;30;42m"
+info_text = "\033[38;5;208m"
+normal_text = "\033[0;0m"
 
 
-# pairs = string_to_list(create_plain_text(cipher, text))
-# print(pairs)
-#
-# encoded_pairs = encode(pairs, cipher, 1)
-# print(encoded_pairs)
-#
-# encoded_pairs_polybios = encode_polybios(encoded_pairs, cipher, 1)
-# print(encoded_pairs_polybios)
-#
-# encoded_text_polybios = list_to_string(encoded_pairs_polybios)
-# print(encoded_text_polybios)
-#
-# re_encoded_pairs_polybios = polybius_square_to_list(encoded_text_polybios)
-# print(re_encoded_pairs_polybios)
+class Menu:
+    def print_menu(self):
+        os.system("cls")
+        # os.system("clear")
+        options_keys = self.options.keys()
+        for key in options_keys:
+            if key == "static":
+                print(info_text, str(self.options[key]), normal_text)
+            elif key == self.selected_key:
+                print(highlight, str(self.options[key]), normal_text)
+            else:
+                print(self.options[key])
 
-polybius_pairs = polybius_square_to_list(polybius_str)
-decoded_polybius_pairs = encode_polybios(polybius_pairs, cipher, -1)
-decoded_pairs = encode(decoded_polybius_pairs, cipher, -1)
-print(list_to_string(decoded_pairs))
+    def select_option(self, direction: int):
+        temp = list(self.options)
+        if direction > 0:
+            if len(temp) >= temp.index(self.selected_key) + 1 and temp[temp.index(self.selected_key) + 1] != "static":
+                self.selected_key = temp[temp.index(self.selected_key) + 1]
+                self.print_menu()
+        elif direction < 0:
+            if temp.index(self.selected_key) - 1 >= 0 and temp[temp.index(self.selected_key) - 1] != "static":
+                self.selected_key = temp[temp.index(self.selected_key) - 1]
+                self.print_menu()
 
+    def __init__(self, options: dict):
+        self.options = options
+        self.selected_key = list(self.options)[0]
+        self.print_menu()
+
+    def on_release(self, key):
+        if key == Key.up:
+            self.select_option(-1)
+            flush_input()
+        elif key == Key.down:
+            self.select_option(1)
+            flush_input()
+        elif key == Key.enter:
+            flush_input()
+            return False
+
+
+def on_release(key):
+    if key == Key.esc:
+        quit()
+    else:
+        return False
+
+
+while True:
+    sys.stdin.flush()
+    code_direction_menu = Menu({1: "Encode a message", -1: "Decode a message", "static": "Exit with 'ctrl + c' at any "
+                                                                                         "time"})
+    with keyboard.Listener(on_release=code_direction_menu.on_release) as listener:
+        listener.join()
+
+    is_polybius_menu = Menu({1: "With Polybius", -1: "Without Polybius", "static": "Exit with 'ctrl  + c' at any time"})
+    with keyboard.Listener(on_release=is_polybius_menu.on_release) as listener:
+        listener.join()
+
+    # coding_key = input("Enter the coding key (if none, leave empty): ")
+    coding_key = "bolyai/j"
+    cipher = create_alphabet_charset("EN-alphabet.txt", coding_key)
+    fillerLetter = 'x'
+
+    message = input("Enter the message: ")
+    result = ""
+    time.sleep(0.1)
+    sys.stdin.flush()
+
+    if code_direction_menu.selected_key == 1:
+        if is_polybius_menu.selected_key == 1:
+            result = list_to_string(encode_polybios(encode(string_to_list(message), cipher, 1), cipher, 1))
+        else:
+            result = list_to_string(encode(string_to_list(message), cipher, 1))
+    else:
+        if is_polybius_menu.selected_key == 1:
+            result = list_to_string(encode(encode_polybios(polybius_square_to_list(message), cipher, -1), cipher, -1))
+        else:
+            result = list_to_string(encode(string_to_list(message), cipher, -1))
+
+    os.system("cls")
+    print(info_text, "Coded message: ", normal_text, result)
+    pyperclip.copy(result)
+    print(info_text, "Copied to clipboard", normal_text)
+    print("Press ESC to quit or any other key to continue")
+    with Listener(on_release=on_release) as main_listener:
+        main_listener.join()

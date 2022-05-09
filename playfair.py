@@ -292,8 +292,8 @@ def on_release(key):
         return False
 
 
-# coding_key = input("Enter the coding key (if none, leave empty): ")
-coding_key = "bolyai/j"
+coding_key = input("Enter the coding key (if none, leave empty): ")
+# coding_key = "bolyai/j"
 cipher = create_alphabet_charset("EN-alphabet.txt", coding_key)
 fillerLetter = 'x'
 
@@ -333,11 +333,6 @@ while True:
     with Listener(on_release=on_release) as main_listener:
         main_listener.join()
 
-# test = string_to_list("hello world")
-# print(test)
-# result = encode(test, cipher, 1)
-# print(result)
-# print(encode(result, cipher, -1))
 
 
 

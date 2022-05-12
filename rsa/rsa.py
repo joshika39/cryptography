@@ -143,23 +143,23 @@ class Person:
         print(f'{self.name} modulusa: {t_key.n} es fi-je: {t_key.fi}')
         print(f'{self.name} nyilt kulcsa: {t_key.e} es titkos kulcsa: {t_key.t}')
 
-    def send_message_to(self, foreign_key: tuple[int, int], text: int) -> int:
+    def send_message_to(self, foreign_key: tuple[int, int], text: int, self_coded=False) -> int:
         f_e, f_n = foreign_key
-        if self.proba:
+        if not self_coded:
             return pow_desc(f_e, f_n, text)
         else:
-            print(f"Az en ({self.name}) titkoskulcsom rarakasa")
+            print(f"Az en ({self.name.lower()}) titkoskulcsom rarakasa")
             init_layer = pow_desc(self._key.t, self._key.n, text)
             print("Az idegen nyiltkulcs rarakasa")
             final_layer = pow_desc(f_e, f_n, init_layer)
             return final_layer
 
-    def receive_message(self, foreign_key: tuple[int, int], text: int) -> int:
+    def receive_message(self, foreign_key: tuple[int, int], text: int, self_coded=False) -> int:
         f_e, f_n = foreign_key
-        if self.proba:
+        if not self_coded:
             return pow_desc(self._key.t, self._key.n, text)
         else:
-            print(f"Az en ({self.name}) nyiltkulcsom lebontasa")
+            print(f"Az en ({self.name.upper()}) nyiltkulcsom lebontasa")
             init_layer = pow_desc(self._key.t, self._key.n, text)
             print("Az idegen titkoskulcs lebontasa")
             final_layer = pow_desc(f_e, f_n, init_layer)
@@ -167,13 +167,13 @@ class Person:
 
 
 proba = bool(input("Proba? (True, False)"))
-person_1 = Person(debug=proba)
-person_2 = Person(debug=proba)
+person_1 = Person(Key(7, 11, 13), name="J")
+person_2 = Person(Key(5, 19, 7), "Z")
 person_1.print_all_data()
 person_2.print_all_data()
-send = 5
-en_message = person_1.send_message_to(person_2.share_pub_key(), send)
+send = 8
+en_message = person_1.send_message_to(person_2.share_pub_key(), send, True)
 print(f'Message: {send}, encrypted: {en_message}')
 print()
-de_message = person_2.receive_message(person_1.share_pub_key(), en_message)
+de_message = person_2.receive_message(person_1.share_pub_key(), en_message, True)
 print(f'Encrypted: {en_message}, decrypted: {de_message}')

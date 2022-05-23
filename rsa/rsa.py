@@ -1,6 +1,8 @@
 import math
 import math as m
 import random
+import time
+
 import numpy as np
 
 
@@ -88,31 +90,32 @@ class Key:
 
     def _get_public_key(self):
         self.e = random.randint(2, self.fi)
-        print(f'e: {self.e}, fi: {self.fi}')
+        # print(f'e: {self.e}, fi: {self.fi}')
         gcd = math.gcd(self.e, self.fi)
-        print(f'GCD: {gcd}, e: {self.e}, fi: {self.fi}')
+        # print(f'GCD: {gcd}, e: {self.e}, fi: {self.fi}')
         if gcd != 1:
             while gcd != 1:
                 self.e = random.randint(2, self.fi)
                 gcd = math.gcd(self.e, self.fi)
-                print(f'GCD: {gcd}, e: {self.e}, fi: {self.fi}')
+                # print(f'GCD: {gcd}, e: {self.e}, fi: {self.fi}')
 
     def _get_private_key(self):
         gcd, a, b = self._gcd_extended(self.e, self.fi)
-        print(f'private key: {self.fi} + {a}')
         if a > 0:
             self.t = a
+            print(f'Titkos kulcs: {self.t}')
         else:
             self.t = self.fi + a
+            print(f'Titkos kulcs: {self.fi} - {abs(a)} = {self.t}')
 
     def _gcd_extended(self, a, b):
-        print(f'pre, a: {a}, b: {b}')
+        # print(f'pre, a: {a}, b: {b}')
         if a == 0:
             return b, 0, 1
         gcd, x1, y1 = self._gcd_extended(b % a, a)
         x = y1 - (b // a) * x1
         y = x1
-        print(f'gcd: {gcd}, x: {x}, y: {y}')
+        # print(f'gcd: {gcd}, x: {x}, y: {y}')
         return gcd, x, y
 
 
@@ -122,6 +125,7 @@ class Person:
             self.name = input("A szemely neve: ")
         else:
             self.name = name
+            print(f'Üdvözlöm {self.name}')
         self.proba = debug
         if key is None:
             if self.proba:
@@ -166,14 +170,14 @@ class Person:
             return final_layer
 
 
-proba = bool(input("Proba? (True, False)"))
-person_1 = Person(Key(7, 11, 13), name="J")
-person_2 = Person(Key(5, 19, 7), "Z")
+person_1 = Person(name="J", debug=True)
+person_2 = Person(name="Z", debug=True)
 person_1.print_all_data()
 person_2.print_all_data()
-send = 8
+send = 9
 en_message = person_1.send_message_to(person_2.share_pub_key(), send, True)
 print(f'Message: {send}, encrypted: {en_message}')
 print()
 de_message = person_2.receive_message(person_1.share_pub_key(), en_message, True)
 print(f'Encrypted: {en_message}, decrypted: {de_message}')
+time.sleep(3)

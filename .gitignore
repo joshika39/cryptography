@@ -1,1 +1,3 @@
 ﻿.idea
+rsa/build
+*.spec

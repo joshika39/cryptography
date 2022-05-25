@@ -297,42 +297,53 @@ coding_key = input("Enter the coding key (if none, leave empty): ")
 cipher = create_alphabet_charset("EN-alphabet.txt", coding_key)
 fillerLetter = 'x'
 
-while True:
-    sys.stdin.flush()
-    code_direction_menu = Menu({1: "Encode a message", -1: "Decode a message", "static": "Exit with 'ctrl + c' at any "
-                                                                                         "time"})
-    with keyboard.Listener(on_release=code_direction_menu.on_release) as listener:
-        listener.join()
 
-    is_polybius_menu = Menu({1: "With Polybius", -1: "Without Polybius", "static": "Exit with 'ctrl  + c' at any time"})
-    with keyboard.Listener(on_release=is_polybius_menu.on_release) as listener:
-        listener.join()
+def main():
+    while True:
+        sys.stdin.flush()
+        code_direction_menu = Menu(
+            {1: "Encode a message", -1: "Decode a message", "static": "Exit with 'ctrl + c' at any "
+                                                                      "time"})
+        with keyboard.Listener(on_release=code_direction_menu.on_release) as listener:
+            listener.join()
 
-    message = input("Enter the message: ")
-    message = message.lower()
-    result = ""
-    time.sleep(0.1)
-    sys.stdin.flush()
+        choice = Menu({1: "With Polybius", -1: "With Playfair", "static": "Exit with 'ctrl  + c' at any time"})
+        with keyboard.Listener(on_release=choice.on_release) as listener:
+            listener.join()
 
-    if code_direction_menu.selected_key == 1:
-        if is_polybius_menu.selected_key == 1:
-            result = list_to_string(encode_polybios(encode(string_to_list(message), cipher, 1), cipher, 1))
+        message = input("Enter the message: ")
+        message = message.lower()
+        result = ""
+        time.sleep(0.1)
+        sys.stdin.flush()
+
+        if code_direction_menu.selected_key == 1:
+
+            if choice.selected_key == 1:
+                result = list_to_string(encode_polybios(string_to_list(message), cipher, 1))
+            else:
+                result = list_to_string(encode(string_to_list(message), cipher, 1))
+            os.system("cls")
+            print(info_text, "Coded message: ", normal_text, result)
+            pyperclip.copy(result)
+            print(info_text, "Copied to clipboard", normal_text)
+            print("Press ESC to quit or any other key to continue")
         else:
-            result = list_to_string(encode(string_to_list(message), cipher, 1))
-    else:
-        if is_polybius_menu.selected_key == 1:
-            result = list_to_string(encode(encode_polybios(polybius_square_to_list(message), cipher, -1), cipher, -1))
-        else:
-            result = list_to_string(encode(string_to_list(message), cipher, -1))
+            if choice.selected_key == 1:
+                result = list_to_string(encode_polybios(polybius_square_to_list(message), cipher, -1))
+            else:
+                result = list_to_string(encode(string_to_list(message), cipher, -1))
+            os.system("cls")
+            print(info_text, "Coded message: ", normal_text, result)
+            pyperclip.copy(result)
+            print(info_text, "Copied to clipboard", normal_text)
+            print("Press ESC to quit or any other key to continue")
 
-    os.system("cls")
-    print(info_text, "Coded message: ", normal_text, result)
-    pyperclip.copy(result)
-    print(info_text, "Copied to clipboard", normal_text)
-    print("Press ESC to quit or any other key to continue")
-    with Listener(on_release=on_release) as main_listener:
-        main_listener.join()
+        with Listener(on_release=on_release) as main_listener:
+            main_listener.join()
 
 
+if __name__ == '__main__':
+    main()
 
 

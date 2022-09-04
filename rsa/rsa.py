@@ -1,12 +1,19 @@
-import os
 import math
-import random
-import time
-from typing import List
-
+import sys
+import os
 from pynput import keyboard
 from pynput.keyboard import Key, Listener
-import numpy as np
+import random
+from functions import *
+from typing import List
+# import pywintypes
+# import win32api
+
+
+# GLOBALS
+highlight = "\x1b[6;30;42m"
+info_text = "\033[38;5;208m"
+normal_text = "\033[0;0m"
 
 
 def flush_input():
@@ -20,76 +27,51 @@ def flush_input():
         termios.tcflush(sys.stdin, termios.TCIOFLUSH)
 
 
-def get_random_prime_integer(bounds):
-    for i in range(bounds.__len__() - 1):
-        if bounds[i + 1] > bounds[i]:
-            x = bounds[i] + np.random.randint(bounds[i + 1] - bounds[i])
-            if is_prime(x):
-                return x
+class Menu:
+    def print_menu(self):
+        os.system("cls")
+        # os.system("clear")
+        options_keys = self.options.keys()
+        for key in options_keys:
+            if key == "static":
+                print(info_text, str(self.options[key]), normal_text)
+            elif key == self.selected_key:
+                print(highlight, str(self.options[key]), normal_text)
+            else:
+                print(self.options[key])
 
-        else:
-            if is_prime(bounds[i]):
-                return bounds[i]
+    def select_option(self, direction: int):
+        temp = list(self.options)
+        if direction > 0:
+            if len(temp) >= temp.index(self.selected_key) + 1 and temp[temp.index(self.selected_key) + 1] != "static":
+                self.selected_key = temp[temp.index(self.selected_key) + 1]
+                self.print_menu()
+        elif direction < 0:
+            if temp.index(self.selected_key) - 1 >= 0 and temp[temp.index(self.selected_key) - 1] != "static":
+                self.selected_key = temp[temp.index(self.selected_key) - 1]
+                self.print_menu()
 
-        if is_prime(bounds[i + 1]):
-            return bounds[i + 1]
+    def __init__(self, options: dict):
+        self.options = options
+        self.selected_key = list(self.options)[0]
+        self.print_menu()
 
-    newBounds = [0 for i in range(2 * bounds.__len__() - 1)]
-    newBounds[0] = bounds[0]
-    for i in range(1, bounds.__len__()):
-        newBounds[2 * i - 1] = int((bounds[i - 1] + bounds[i]) / 2)
-        newBounds[2 * i] = bounds[i]
-
-    return get_random_prime_integer(newBounds)
-
-
-def is_prime(x):
-    count = 0
-    for i in range(int(x / 2)):
-        if x % (i + 1) == 0:
-            count = count + 1
-    return count == 1
-
-
-def pow_desc(exp: int, mod: int, message, debug=False):
-    print(f'Titkosítjuk: a(z) {message} üzenetet {exp} kulccsal és {mod} modulóval')
-    res = 1
-    coefficient = 1
-    base = message
-    while exp > 1:
-        if coefficient != 1:
-            if debug: print(f'{message}^{exp} * {coefficient} ({mod}) = ')
-        else:
-            if debug: print(f'{message}^{exp} ({mod}) = ')
-
-        if exp % 2 != 0:
-            exp -= 1
-            coefficient *= base
-            if coefficient > mod:
-                coefficient %= mod
-            if debug: print(f'{message}^{exp} * {coefficient} ({mod}) = ')
-            res = (res * message) % mod
-        message = message ** 2
-        if debug: print(f'{message}^{exp} * {coefficient} ({mod}) = ')
-        message %= mod
-        exp //= 2
-
-    if coefficient != 1:
-        if debug: print(f'{message}^{exp} * {coefficient} ({mod}) = ')
-    else:
-        if debug: print(f'{message}^{exp} ({mod}) = \n{exp & 1}')
-    return (message * res) % mod
+    def on_release(self, key):
+        if key == Key.up:
+            self.select_option(-1)
+            flush_input()
+        elif key == Key.down:
+            self.select_option(1)
+            flush_input()
+        elif key == Key.space:
+            flush_input()
+            return False
 
 
-def gcd_extended(a, b, debug=False):
-    if debug: print(f'Euklidészi algoritmus -> a: {a}, b: {b}')
-    if a == 0:
-        return b, 0, 1
-    gcd, x1, y1 = gcd_extended(b % a, a, debug)
-    x = y1 - (b // a) * x1
-    y = x1
-    if debug: print(f'gcd: {gcd}, x: {x}, y: {y}')
-    return gcd, x, y
+def on_release(key):
+    if key == Key.space:
+        return False
+
 
 
 class RsaKey:
@@ -102,9 +84,10 @@ class RsaKey:
             if math.gcd(self.e, self.fi) != 1:
                 print("Nem jó nyílt kulcs.. Keresek én!")
                 self._get_public_key()
+                print(f'Az általam vett nyílt kulcs: {self.e}')
             self._get_private_key()
         else:
-            limits = [800, 1000]
+            limits = [1500, 2000]
             self.p, self.q = get_random_prime_integer(limits), get_random_prime_integer(limits)
             while self.p == self.q:
                 self.p, self.q = get_random_prime_integer(limits), get_random_prime_integer(limits)
@@ -115,17 +98,14 @@ class RsaKey:
 
     def _get_public_key(self):
         self.e = random.randint(2, self.fi)
-        # print(f'e: {self.e}, fi: {self.fi}')
         gcd = math.gcd(self.e, self.fi)
-        # print(f'GCD: {gcd}, e: {self.e}, fi: {self.fi}')
         if gcd != 1:
             while gcd != 1:
                 self.e = random.randint(2, self.fi)
                 gcd = math.gcd(self.e, self.fi)
-                # print(f'GCD: {gcd}, e: {self.e}, fi: {self.fi}')
 
     def _get_private_key(self):
-        gcd, a, b = gcd_extended(self.e, self.fi)
+        gcd, a, b = diophantine_equation(self.e, self.fi)
         if a > 0:
             self.t = a
             print(f'Titkos kulcs: {self.t}')
@@ -187,58 +167,6 @@ class Person:
             return final_layer
 
 
-# GLOBALS
-highlight = "\x1b[6;30;42m"
-info_text = "\033[38;5;208m"
-normal_text = "\033[0;0m"
-
-
-class Menu:
-    def print_menu(self):
-        os.system("cls")
-        # os.system("clear")
-        options_keys = self.options.keys()
-        for key in options_keys:
-            if key == "static":
-                print(info_text, str(self.options[key]), normal_text)
-            elif key == self.selected_key:
-                print(highlight, str(self.options[key]), normal_text)
-            else:
-                print(self.options[key])
-
-    def select_option(self, direction: int):
-        temp = list(self.options)
-        if direction > 0:
-            if len(temp) >= temp.index(self.selected_key) + 1 and temp[temp.index(self.selected_key) + 1] != "static":
-                self.selected_key = temp[temp.index(self.selected_key) + 1]
-                self.print_menu()
-        elif direction < 0:
-            if temp.index(self.selected_key) - 1 >= 0 and temp[temp.index(self.selected_key) - 1] != "static":
-                self.selected_key = temp[temp.index(self.selected_key) - 1]
-                self.print_menu()
-
-    def __init__(self, options: dict):
-        self.options = options
-        self.selected_key = list(self.options)[0]
-        self.print_menu()
-
-    def on_release(self, key):
-        if key == Key.up:
-            self.select_option(-1)
-            flush_input()
-        elif key == Key.down:
-            self.select_option(1)
-            flush_input()
-        elif key == Key.space:
-            flush_input()
-            return False
-
-
-def on_release(key):
-    if key == Key.space:
-        return False
-
-
 persons: List[Person] = []
 
 
@@ -254,16 +182,16 @@ def get_person_by_name(name: str) -> Person:
     return searched
 
 
-
 def main():
     choice = None
     choice = Menu(
         {
-            0: "Személy hozzáadás",
-            1: "Személy adatainak kiírása",
-            2: "Üzenet küldés",
-            3: "Üzenet fogadás",
-            4: "Alap műveletek",
+            0: "Személy generálás",
+            1: "Személy hozzáadás",
+            2: "Személy adatainak kiírása",
+            3: "Üzenet küldés",
+            4: "Üzenet fogadás",
+            5: "Alap műveletek",
             "static": "Szóközzel válasszon opciót!"
         })
     with keyboard.Listener(on_release=choice.on_release) as listener:
@@ -271,14 +199,19 @@ def main():
 
     if choice.selected_key == 0:
         name = input("Kérem az új személy nevét: ")
-        persons.append(Person(name=name, debug=True))
+        gen_person = Person(name=name)
+        persons.append(gen_person)
 
     if choice.selected_key == 1:
+        name = input("Kérem az új személy nevét: ")
+        persons.append(Person(name=name, debug=True))
+
+    if choice.selected_key == 2:
         name = input("Kérem a személy nevét: ")
         person = get_person_by_name(name)
         person.print_all_data()
 
-    if choice.selected_key == 2:
+    if choice.selected_key == 3:
         digital = Menu(
             {
                 0: "Digitálisan aláírva",
@@ -288,7 +221,7 @@ def main():
         with keyboard.Listener(on_release=digital.on_release) as listener:
             listener.join()
         if digital.selected_key == 0:
-            whom = input("Ki küldi: ")
+            whom = input("Az ön neve: ")
             target = input("Kinek szeretné küldeni: ")
             sender_person = get_person_by_name(whom)
             receiver_person = get_person_by_name(target)
@@ -302,7 +235,7 @@ def main():
             en_message = receiver_person.send_message_to(receiver_person.share_pub_key(), message)
             print(f'Üzenet: {message}, titkosított üzenet: {en_message}')
 
-    if choice.selected_key == 3:
+    if choice.selected_key == 4:
         digital = Menu(
             {
                 0: "Digitálisan aláírva",
@@ -313,41 +246,50 @@ def main():
             listener.join()
 
         if digital.selected_key == 0:
-            whom = input("Ki küldi: ")
-            target = input("Ki a címzett: ")
+            whom = input("Kitől érkezik: ")
+            target = input("Az ön neve: ")
             sender_person = get_person_by_name(whom)
             receiver_person = get_person_by_name(target)
             digitally_signed_message = int(input("Titkosított üzenet: "))
             message = receiver_person.receive_message(sender_person.share_pub_key(), digitally_signed_message, True)
             print(f'Titkosított üzenet: {digitally_signed_message},  üzenet: {message}')
         else:
-            target = input("Kitől fogad üzenetet: ")
+            target = input("Az ön neve: ")
             receiver_person = get_person_by_name(target)
             en_message = int(input("Titkosított üzenet: "))
             message = receiver_person.receive_message((0, 0), en_message)
             print(f'Titkosított üzenet: {en_message},  üzenet: {message}')
 
-    if choice.selected_key == 4:
+    if choice.selected_key == 5:
         operation = Menu(
             {
-                0: "Euklidészi Algoritmus és Diofantoszi egyenlet (rekurzív)",
-                1: "Moduló számítás",
-                2: "Vissza",
+                0: "euclidean_algorithm(a, b)",
+                1: "diophantine_equation(a, b)",
+                2: "pow_desc(exp, mod, message)",
+                3: "Vissza",
                 "static": "Szóközzel válasszon opciót!"
             })
         with keyboard.Listener(on_release=operation.on_release) as listener:
             listener.join()
+        os.system("cls")
         if operation.selected_key == 0:
-            mod_fi = int(input("Adja meg a fi függvény által kapott számot: "))
-            e_test = int(input("Adja meg nyilt kulcsnak szánt számot: "))
-            gcd_extended(e_test, mod_fi, True)
+            mod_fi = int(input("Adja meg az \'a\' számot (fi(n)): "))
+            e_test = int(input("Adja meg a \'b\' számot (e): "))
+            print(f'Meghívott függvény:', info_text, f'euclidean_algorithm({mod_fi}, {e_test})', normal_text)
+            gcd = euclidean_algorithm(mod_fi, e_test)
+            print(f'Legnagyobb közös osztó: ', info_text, gcd, normal_text)
         if operation.selected_key == 1:
-            mod = int(input("Adja meg a modulót: "))
-            key = int(input("Adja meg a kulcsot: "))
-            message = int(input("Adja meg az üzenetet: "))
-            coded_message = pow_desc(37, 77, 8, True)
+            mod_fi = int(input("Adja meg az \'a\' számot (fi(n)): "))
+            e_test = int(input("Adja meg a \'b\' számot (e): "))
+            print(f'Meghívott függvény:', info_text, f'diophantine_equation({mod_fi}, {e_test})', normal_text)
+            diophantine_equation(mod_fi, e_test, True)
+        if operation.selected_key == 2:
+            key = int(input("Adja meg a kulcsot (e/t): "))
+            mod = int(input("Adja meg a modulót (n): "))
+            message = int(input("Adja meg az üzenetet (m): "))
+            print(f'Meghívott függvény:', info_text, f'pow_desc({key}, {mod}, {message})', normal_text)
+            coded_message = pow_desc(key, mod, message, True)
             print(f'Titkosított üzenet: {message} -> {coded_message}')
-
 
     print()
     print("Nyomja meg a szóköz gombot a folytatáshoz!")

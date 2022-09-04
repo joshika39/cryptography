@@ -1,3 +1,6 @@
 ﻿.idea
 rsa/build
 *.spec
+build/
+__pycache__/
+dist/

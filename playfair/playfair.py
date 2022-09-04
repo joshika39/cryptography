@@ -5,6 +5,12 @@ import pyperclip
 from pynput import keyboard
 from pynput.keyboard import Key, Listener
 
+# GLOBALS
+highlight = "\x1b[6;30;42m"
+info_text = "\033[38;5;208m"
+normal_text = "\033[0;0m"
+gray = "\033[0;90m"
+
 
 def flush_input():
     try:
@@ -15,6 +21,52 @@ def flush_input():
         import sys
         import termios  # for linux/unix
         termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+
+
+class Menu:
+    def print_menu(self):
+        os.system("cls")
+        # os.system("clear")
+        options_keys = self.options.keys()
+        for key in options_keys:
+            if key == "static":
+                print(info_text, str(self.options[key]), normal_text)
+            elif key == self.selected_key:
+                print(highlight, str(self.options[key]), normal_text)
+            else:
+                print(self.options[key])
+
+    def select_option(self, direction: int):
+        temp = list(self.options)
+        if direction > 0:
+            if len(temp) >= temp.index(self.selected_key) + 1 and temp[temp.index(self.selected_key) + 1] != "static":
+                self.selected_key = temp[temp.index(self.selected_key) + 1]
+                self.print_menu()
+        elif direction < 0:
+            if temp.index(self.selected_key) - 1 >= 0 and temp[temp.index(self.selected_key) - 1] != "static":
+                self.selected_key = temp[temp.index(self.selected_key) - 1]
+                self.print_menu()
+
+    def __init__(self, options: dict):
+        self.options = options
+        self.selected_key = list(self.options)[0]
+        self.print_menu()
+
+    def on_release(self, key):
+        if key == Key.up:
+            self.select_option(-1)
+            flush_input()
+        elif key == Key.down:
+            self.select_option(1)
+            flush_input()
+        elif key == Key.space:
+            flush_input()
+            return False
+
+
+def on_release(key):
+    if key == Key.space:
+        return False
 
 
 def letter_row(search_target: str, matrix: list) -> int:
@@ -238,80 +290,25 @@ def create_alphabet_charset(alphabet_file: str, key_string: str) -> list:
     return table
 
 
-# GLOBALS
-highlight = "\x1b[6;30;42m"
-info_text = "\033[38;5;208m"
-normal_text = "\033[0;0m"
-
-
-class Menu:
-    def print_menu(self):
-        os.system("cls")
-        # os.system("clear")
-        options_keys = self.options.keys()
-        for key in options_keys:
-            if key == "static":
-                print(info_text, str(self.options[key]), normal_text)
-            elif key == self.selected_key:
-                print(highlight, str(self.options[key]), normal_text)
-            else:
-                print(self.options[key])
-
-    def select_option(self, direction: int):
-        temp = list(self.options)
-        if direction > 0:
-            if len(temp) >= temp.index(self.selected_key) + 1 and temp[temp.index(self.selected_key) + 1] != "static":
-                self.selected_key = temp[temp.index(self.selected_key) + 1]
-                self.print_menu()
-        elif direction < 0:
-            if temp.index(self.selected_key) - 1 >= 0 and temp[temp.index(self.selected_key) - 1] != "static":
-                self.selected_key = temp[temp.index(self.selected_key) - 1]
-                self.print_menu()
-
-    def __init__(self, options: dict):
-        self.options = options
-        self.selected_key = list(self.options)[0]
-        self.print_menu()
-
-    def on_release(self, key):
-        if key == Key.up:
-            self.select_option(-1)
-            flush_input()
-        elif key == Key.down:
-            self.select_option(1)
-            flush_input()
-        elif key == Key.enter:
-            flush_input()
-            return False
-
-
-def on_release(key):
-    if key == Key.esc:
-        quit()
-    else:
-        return False
-
-
-coding_key = input("Enter the coding key (if none, leave empty): ")
-# coding_key = "bolyai/j"
-cipher = create_alphabet_charset("EN-alphabet.txt", coding_key)
 fillerLetter = 'x'
 
 
 def main():
     while True:
+        coding_key = input("Adja meg a kulcsot. (ha nincs, hagyja üresen): ")
+        cipher = create_alphabet_charset("EN-alphabet.txt", coding_key)
+
         sys.stdin.flush()
         code_direction_menu = Menu(
-            {1: "Encode a message", -1: "Decode a message", "static": "Exit with 'ctrl + c' at any "
-                                                                      "time"})
+            {1: "Titkosítás", -1: "Dekódolás", "static": "Szóközzel tud választani"})
         with keyboard.Listener(on_release=code_direction_menu.on_release) as listener:
             listener.join()
 
-        choice = Menu({1: "With Polybius", -1: "With Playfair", "static": "Exit with 'ctrl  + c' at any time"})
+        choice = Menu({1: "Polübiusszal", -1: "Playfair-el", "static": "Szóközzel tud választani"})
         with keyboard.Listener(on_release=choice.on_release) as listener:
             listener.join()
 
-        message = input("Enter the message: ")
+        message = input("Adja meg az üzenetet: ")
         message = message.lower()
         result = ""
         time.sleep(0.1)
@@ -324,20 +321,18 @@ def main():
             else:
                 result = list_to_string(encode(string_to_list(message), cipher, 1))
             os.system("cls")
-            print(info_text, "Coded message: ", normal_text, result)
+            print("Titkosított üzenet: ", info_text, result, normal_text)
             pyperclip.copy(result)
-            print(info_text, "Copied to clipboard", normal_text)
-            print("Press ESC to quit or any other key to continue")
+            print(info_text, "Vágólapra másolva!", normal_text)
         else:
             if choice.selected_key == 1:
                 result = list_to_string(encode_polybios(polybius_square_to_list(message), cipher, -1))
             else:
                 result = list_to_string(encode(string_to_list(message), cipher, -1))
             os.system("cls")
-            print(info_text, "Coded message: ", normal_text, result)
+            print(gray, "Titkosított üzenet: ", info_text, result, normal_text)
             pyperclip.copy(result)
-            print(info_text, "Copied to clipboard", normal_text)
-            print("Press ESC to quit or any other key to continue")
+            print(gray, "Vágólapra másolva!", normal_text)
 
         with Listener(on_release=on_release) as main_listener:
             main_listener.join()
